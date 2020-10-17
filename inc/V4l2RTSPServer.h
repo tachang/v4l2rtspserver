@@ -141,9 +141,10 @@ class V4l2RTSPServer {
         // -----------------------------------------
         //    convert string audio format to pcm
         // -----------------------------------------
-        static std::string getAudioRtpFormat(snd_pcm_format_t format, int sampleRate, int channels)
-        {
+        static std::string getAudioRtpFormat(snd_pcm_format_t format, int sampleRate, int channels, bool useOpus)
+        {            
             std::ostringstream os;
+
             os << "audio/";
             switch (format) {
                 case SND_PCM_FORMAT_A_LAW:
@@ -170,7 +171,14 @@ class V4l2RTSPServer {
                     os << "L16";
                     break;
             }
-            os << "/" << sampleRate << "/" << channels;
+
+            if (useOpus) {
+                os.str("");
+                os.clear();
+                os << "audio/OPUS";
+            }
+
+            os << "/" << sampleRate << "/" << channels;            
             return os.str();
         }
 #endif

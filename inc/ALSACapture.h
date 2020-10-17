@@ -17,12 +17,14 @@
 #include <list>
 
 #include <alsa/asoundlib.h>
+#include <opus.h>
 #include "logger.h"
 
 struct ALSACaptureParameters 
 {
-	ALSACaptureParameters(const char* devname, const std::list<snd_pcm_format_t> & formatList, unsigned int sampleRate, unsigned int channels, int verbose) : 
-		m_devName(devname), m_formatList(formatList), m_sampleRate(sampleRate), m_channels(channels), m_verbose(verbose) {
+	ALSACaptureParameters(const char* devname,
+		const std::list<snd_pcm_format_t> & formatList, unsigned int sampleRate, unsigned int channels, int verbose, bool useOpus) : 
+		m_devName(devname), m_formatList(formatList), m_sampleRate(sampleRate), m_channels(channels), m_verbose(verbose), m_useOpus(useOpus) {
 			
 	}
 		
@@ -31,6 +33,7 @@ struct ALSACaptureParameters
 	unsigned int     m_sampleRate;
 	unsigned int     m_channels;
 	int              m_verbose;
+	bool			 m_useOpus;
 };
 
 class ALSACapture 
@@ -39,6 +42,8 @@ class ALSACapture
 		static ALSACapture* createNew(const ALSACaptureParameters & params) ;
 		virtual ~ALSACapture();
 		void close();
+		void PCMInfo(snd_pcm_hw_params_t *hw_params);
+
 	
 	protected:
 		ALSACapture(const ALSACaptureParameters & params);
@@ -56,13 +61,15 @@ class ALSACapture
 		unsigned long getSampleRate() { return m_params.m_sampleRate; }
 		unsigned long getChannels  () { return m_params.m_channels;   }
 		snd_pcm_format_t getFormat () { return m_fmt;                 }
-		
+
 	private:
 		snd_pcm_t*            m_pcm;
 		unsigned long         m_bufferSize;
 		unsigned long         m_periodSize;
 		ALSACaptureParameters m_params;
 		snd_pcm_format_t      m_fmt;
+		OpusEncoder*          encoder;
+		bool				  useOpus;
 };
 
 #endif
