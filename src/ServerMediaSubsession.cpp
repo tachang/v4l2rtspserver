@@ -49,12 +49,16 @@ FramedSource* BaseServerMediaSubsession::createSource(UsageEnvironment& env, Fra
 RTPSink*  BaseServerMediaSubsession::createSink(UsageEnvironment& env, Groupsock* rtpGroupsock, unsigned char rtpPayloadTypeIfDynamic, const std::string& format, V4L2DeviceSource* source)
 {
 	RTPSink* videoSink = NULL;
+
+	LOG(NOTICE) << "createSink with format: " << format;
+
+
 	if (format == "video/MP2T")
 	{
 		videoSink = SimpleRTPSink::createNew(env, rtpGroupsock,rtpPayloadTypeIfDynamic, 90000, "video", "MP2T", 1, True, False); 
 	}
 	else if (format == "video/H264")
-        {
+    {
 		videoSink = H264VideoRTPSink::createNew(env, rtpGroupsock,rtpPayloadTypeIfDynamic);
 	}
 	else if (format == "video/VP8")
@@ -67,7 +71,7 @@ RTPSink*  BaseServerMediaSubsession::createSink(UsageEnvironment& env, Groupsock
 		videoSink = VP9VideoRTPSink::createNew (env, rtpGroupsock,rtpPayloadTypeIfDynamic); 
 	}
 	else if (format == "video/H265")
-        {
+    {
 		videoSink = H265VideoRTPSink::createNew(env, rtpGroupsock,rtpPayloadTypeIfDynamic);
 	}
 #endif	
@@ -87,6 +91,17 @@ RTPSink*  BaseServerMediaSubsession::createSink(UsageEnvironment& env, Groupsock
 		videoSink = RawVideoRTPSink::createNew(env, rtpGroupsock, rtpPayloadTypeIfDynamic, source->getWidth(), source->getHeight(), 8, sampling.c_str(),"BT709-2");
     } 
 #endif	
+    else if (format.find("audio/OPUS") == 0) {
+	    std::istringstream is(format);
+	    std::string dummy;
+	    getline(is, dummy, '/');
+	    getline(is, dummy, '/');
+	    std::string sampleRate("48000");
+	    getline(is, sampleRate, '/');
+	    std::string channels("1");
+	    getline(is, channels);
+	    videoSink = SimpleRTPSink::createNew(env, rtpGroupsock, rtpPayloadTypeIfDynamic, std::stoi(sampleRate), "audio", "OPUS", std::stoi(channels), True, False);
+	}
 	else if (format.find("audio/L16") == 0)
 	{
 		std::istringstream is(format);
@@ -95,8 +110,8 @@ RTPSink*  BaseServerMediaSubsession::createSink(UsageEnvironment& env, Groupsock
 		getline(is, dummy, '/');	
 		std::string sampleRate("44100");
 		getline(is, sampleRate, '/');	
-		std::string channels("2");
-		getline(is, channels);	
+		std::string channels("1");
+		getline(is, channels);
 		videoSink = SimpleRTPSink::createNew(env, rtpGroupsock,rtpPayloadTypeIfDynamic, atoi(sampleRate.c_str()), "audio", "L16", atoi(channels.c_str()), True, False); 
 	}
 	return videoSink;

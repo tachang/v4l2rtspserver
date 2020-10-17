@@ -242,12 +242,15 @@ int main(int argc, char** argv)
 	const char* realm = NULL;
 	std::list<std::string> userPasswordList;
 	std::string webroot;
+	bool useOpus = false;
 #ifdef HAVE_ALSA	
 	int audioFreq = 44100;
 	int audioNbChannels = 2;
 	std::list<snd_pcm_format_t> audioFmtList;
 	snd_pcm_format_t audioFmt = SND_PCM_FORMAT_UNKNOWN;
-#endif	
+#endif
+
+
 	const char* defaultPort = getenv("PORT");
 	if (defaultPort != NULL) {
 		rtspPort = atoi(defaultPort);
@@ -255,7 +258,7 @@ int main(int argc, char** argv)
 
 	// decode parameters
 	int c = 0;     
-	while ((c = getopt (argc, argv, "v::Q:O:b:" "I:P:p:m:u:M:ct:S::" "R:U:" "rwBsf::F:W:H:G:" "A:C:a:" "Vh")) != -1)
+	while ((c = getopt (argc, argv, "v::Q:O:b:" "I:P:p:m:u:M:ct:S::" "R:U:" "rwBsf::F:W:H:G:" "A:C:a:d" "Vh")) != -1)
 	{
 		switch (c)
 		{
@@ -296,7 +299,8 @@ int main(int argc, char** argv)
 			case 'C':	audioNbChannels = atoi(optarg); break;
 			case 'a':	audioFmt = decodeAudioFormat(optarg); if (audioFmt != SND_PCM_FORMAT_UNKNOWN) {audioFmtList.push_back(audioFmt);} ; break;
 #endif			
-			
+			case 'd':   useOpus = true; break;
+
 			// version
 			case 'V':	
 				std::cout << VERSION << std::endl;
@@ -340,6 +344,9 @@ int main(int argc, char** argv)
 				std::cout << "\t -H <height>      : V4L2 capture height (default "<< height << ")"                                                    << std::endl;
 				std::cout << "\t -F <fps>         : V4L2 capture framerate (default "<< fps << ")"                                                    << std::endl;
 				std::cout << "\t -G <w>x<h>[x<f>] : V4L2 capture format (default "<< width << "x" << height << "x" << fps << ")"  << std::endl;
+
+				std::cout << "\t Audio options"                                                                                               << std::endl;
+                std::cout << "\t -d               : Enable OPUS audio encoding"                                                                                    << std::endl;
 				
 #ifdef HAVE_ALSA	
 				std::cout << "\t ALSA options"                                                                                               << std::endl;
@@ -469,12 +476,14 @@ int main(int argc, char** argv)
 				// Init audio capture
 				LOG(NOTICE) << "Create ALSA Source..." << audioDev;
 				
-				ALSACaptureParameters param(audioDev.c_str(), audioFmtList, audioFreq, audioNbChannels, verbose);
+				ALSACaptureParameters param(audioDev.c_str(), audioFmtList, audioFreq, audioNbChannels, verbose, useOpus);
 				ALSACapture* audioCapture = ALSACapture::createNew(param);
-				if (audioCapture) 
+				if (audioCapture)
 				{
-					rtpAudioFormat.assign(V4l2RTSPServer::getAudioRtpFormat(audioCapture->getFormat(),audioCapture->getSampleRate(), audioCapture->getChannels()));
+					rtpAudioFormat.assign(V4l2RTSPServer::getAudioRtpFormat(audioCapture->getFormat(),audioCapture->getSampleRate(), audioCapture->getChannels(), useOpus));
 
+                    LOG(NOTICE) << "RTP audio format: " << rtpAudioFormat;
+                    
 					audioReplicator = DeviceSourceFactory::createStreamReplicator(rtspServer.env(), 0, new DeviceCaptureAccess<ALSACapture>(audioCapture), queueSize, useThread);
 					if (audioReplicator == NULL) 
 					{
